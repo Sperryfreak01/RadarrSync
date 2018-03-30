@@ -31,12 +31,12 @@ python RadarSync.py
 
 
 #### Requirements
- -- Python 3.4 or greater
- -- 2x Radarr servers
- -- Install requirements.txt
+ * Python 3.4 or greater
+ * 2x Radarr servers
+ * Install requirements.txt
 
 #### Notes
- -- Ensure that the root path is the same on both servers. ie /movies
+ * Ensure that the root path is the same on both servers. ie /movies
  
  
  
