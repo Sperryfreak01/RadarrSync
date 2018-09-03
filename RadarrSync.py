@@ -6,6 +6,8 @@ import configparser
 import sys
 
 
+DEV = True
+
 ########################################################################################################################
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -36,9 +38,16 @@ def ConfigSectionMap(section):
 
 
 Config = configparser.ConfigParser()
-settingsFilename = os.path.join(os.getcwd(), 'Config.txt')
+
+# Loads an alternate config file so that I can work on my servers without uploading config to github
+if DEV:
+    settingsFilename = os.path.join(os.getcwd(), 'Dev'
+                                                 'Config.txt')
+else:
+    settingsFilename = os.path.join(os.getcwd(), 'Config.txt')
 Config.read(settingsFilename)
 
+# Create a session and ignore locally configured proxy settings
 session = requests.Session()
 session.trust_env = False
 
@@ -50,12 +59,14 @@ radarr_url = ConfigSectionMap("Radarr")['url']
 radarr_key = ConfigSectionMap("Radarr")['key']
 radarrMovies = session.get('{0}/api/movie?apikey={1}'.format(radarr_url, radarr_key))
 
+# Logs error responses from the server, usefull for trying to figure out no API calls
 if radarrMovies.status_code != 200:
     logger.error('Radarr server error - response {}'.format(radarrMovies.status_code))
     sys.exit(0)
 if radarr4kMovies.status_code != 200:
     logger.error('4K Radarr server error - response {}'.format(radarr4kMovies.status_code))
     sys.exit(0)
+
 
 movieIds4k = []
 for movie4k in radarr4kMovies.json():
