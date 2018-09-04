@@ -6,7 +6,7 @@ import configparser
 import sys
 
 
-DEV = True
+DEV = False
 
 ########################################################################################################################
 logger = logging.getLogger()
