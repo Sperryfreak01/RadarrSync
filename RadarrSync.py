@@ -10,7 +10,7 @@ DEV = True
 
 ########################################################################################################################
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 
 fileHandler = logging.FileHandler("./Output.txt")
@@ -47,67 +47,76 @@ else:
     settingsFilename = os.path.join(os.getcwd(), 'Config.txt')
 Config.read(settingsFilename)
 
-# Create a session and ignore locally configured proxy settings
-session = requests.Session()
-session.trust_env = False
-
-radarr4k_url = ConfigSectionMap("Radarr4k")['url']
-radarr4k_key = ConfigSectionMap("Radarr4k")['key']
-radarr4kMovies = session.get('{0}/api/movie?apikey={1}'.format(radarr4k_url, radarr4k_key))
-
 radarr_url = ConfigSectionMap("Radarr")['url']
 radarr_key = ConfigSectionMap("Radarr")['key']
-radarrMovies = session.get('{0}/api/movie?apikey={1}'.format(radarr_url, radarr_key))
-
-# Logs error responses from the server, usefull for trying to figure out no API calls
+radarrSession = requests.Session()
+radarrSession.trust_env = False
+radarrMovies = radarrSession.get('{0}/api/movie?apikey={1}'.format(radarr_url, radarr_key))
 if radarrMovies.status_code != 200:
     logger.error('Radarr server error - response {}'.format(radarrMovies.status_code))
     sys.exit(0)
-if radarr4kMovies.status_code != 200:
-    logger.error('4K Radarr server error - response {}'.format(radarr4kMovies.status_code))
-    sys.exit(0)
+
+for server in Config.sections():
+
+    if server == 'Default' or server == "Radarr":
+        continue  # Default section handled previously as it always needed
+
+    else:
+        logger.debug('syncing to {0}'.format(server))
+
+        session = requests.Session()
+        session.trust_env = False
+        SyncServer_url = ConfigSectionMap(server)['url']
+        SyncServer_key = ConfigSectionMap(server)['key']
+        SyncServerMovies = session.get('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key))
+        if SyncServerMovies.status_code != 200:
+            logger.error('4K Radarr server error - response {}'.format(SyncServerMovies.status_code))
+            sys.exit(0)
+
+    # build a list of movied IDs already in the sync server, this is used later to prevent readding a movie that already
+    # exists.
+    # TODO refactor variable names to make it clear this builds list of existing not list of movies to add
+    # TODO add reconcilliation to remove movies that have been deleted from source server
+    movieIds_to_syncserver = []
+    for movie_to_sync in SyncServerMovies.json():
+        movieIds_to_syncserver.append(movie_to_sync['tmdbId'])
+        #logger.debug('found movie to be added')
+
+    newMovies = 0
+    searchid = []
+    for movie in radarrMovies.json():
+        if movie['profileId'] == int(ConfigSectionMap(server)['profile']):
+            if movie['tmdbId'] not in movieIds_to_syncserver:
+                logging.debug('title: {0}'.format(movie['title']))
+                logging.debug('qualityProfileId: {0}'.format(movie['qualityProfileId']))
+                logging.debug('titleSlug: {0}'.format(movie['titleSlug']))
+                images = movie['images']
+                for image in images:
+                    image['url'] = '{0}{1}'.format(radarr_url, image['url'])
+                    logging.debug(image['url'])
+                logging.debug('tmdbId: {0}'.format(movie['tmdbId']))
+                logging.debug('path: {0}'.format(movie['path']))
+                logging.debug('monitored: {0}'.format(movie['monitored']))
+
+                payload = {'title': movie['title'],
+                           'qualityProfileId': movie['qualityProfileId'],
+                           'titleSlug': movie['titleSlug'],
+                           'tmdbId': movie['tmdbId'],
+                           'path': movie['path'],
+                           'monitored': movie['monitored'],
+                           'images': images,
+                           'profileId': movie['profileId'],
+                           'minimumAvailability': 'released'
+                           }
+
+                r = session.post('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key), data=json.dumps(payload))
+                searchid.append(int(r.json()['id']))
+                logger.info('adding {0} to {1} server'.format(movie['title'], server))
+            else:
+                logging.debug('{0} already in {1} library'.format(movie['title'], server))
 
 
-movieIds4k = []
-for movie4k in radarr4kMovies.json():
-    movieIds4k.append(movie4k['tmdbId'])
-    #logger.debug('found movie to be added')
-
-newMovies = 0
-searchid = []
-for movie in radarrMovies.json():
-    if movie['profileId'] == 5:
-        if movie['tmdbId'] not in movieIds4k:
-            logging.debug('title: {0}'.format(movie['title']))
-            logging.debug('qualityProfileId: {0}'.format(movie['qualityProfileId']))
-            logging.debug('titleSlug: {0}'.format(movie['titleSlug']))
-            images = movie['images']
-            for image in images:
-                image['url'] = '{0}{1}'.format(radarr_url, image['url'])
-                logging.debug(image['url'])
-            logging.debug('tmdbId: {0}'.format(movie['tmdbId']))
-            logging.debug('path: {0}'.format(movie['path']))
-            logging.debug('monitored: {0}'.format(movie['monitored']))
-
-            payload = {'title': movie['title'],
-                       'qualityProfileId': movie['qualityProfileId'],
-                       'titleSlug': movie['titleSlug'],
-                       'tmdbId': movie['tmdbId'],
-                       'path': movie['path'],
-                       'monitored': movie['monitored'],
-                       'images': images,
-                       'profileId': movie['profileId'],
-                       'minimumAvailability': 'released'
-                       }
-
-            r = session.post('{0}/api/movie?apikey={1}'.format(radarr4k_url, radarr4k_key), data=json.dumps(payload))
-            searchid.append(int(r.json()['id']))
-            logger.info('adding {} to Radarr 4k server'.format(movie['title']))
-        else:
-            logging.debug('{0} already in 4k library'.format(movie['title']))
-
-
-if len(searchid):
-    payload = {'name' : 'MoviesSearch', 'movieIds' : searchid}
-    session.post('{0}/api/command?apikey={1}'.format(radarr4k_url, radarr4k_key),data=json.dumps(payload))
+    if len(searchid):
+        payload = {'name' : 'MoviesSearch', 'movieIds' : searchid}
+        session.post('{0}/api/command?apikey={1}'.format(SyncServer_url, SyncServer_key), data=json.dumps(payload))
 
