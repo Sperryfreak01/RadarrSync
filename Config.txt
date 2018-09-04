@@ -6,7 +6,7 @@ key = FCKGW-RHQQ2-YXRKT-8TG6W-2B7Q8
 [Radarr4k]
 url = http://127.0.0.1:8080
 key = FCKGW-RHQQ2-YXRKT-8TG6W-2B7Q8
-
+profile = 5
 
 
 
