@@ -1,4 +1,4 @@
 todo:
   keyword: ['@todo', 'TODO']
   body: ['@body', 'BODY']
-  label: 'Enhancement'
+  label: 'enhancement'
