@@ -6,7 +6,7 @@ import configparser
 import sys
 from bs4 import BeautifulSoup
 
-DEV = True
+DEV = True # If your are not Sperryfreak01 this should be False
 
 # TODO add way for users to see what would sync without syncing
 # @body I think the best way would be to create a sync report "Sync_Test.txt" or something like it
