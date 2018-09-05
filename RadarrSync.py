@@ -7,10 +7,11 @@ import sys
 
 
 DEV = False
+VER = '1.0.1'
 
 ########################################################################################################################
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 
 fileHandler = logging.FileHandler("./Output.txt")
@@ -36,7 +37,7 @@ def ConfigSectionMap(section):
             dict1[option] = None
     return dict1
 
-
+logger.debug('RadarSync Version {}'.format(VER))
 Config = configparser.ConfigParser()
 
 # Loads an alternate config file so that I can work on my servers without uploading config to github
@@ -76,7 +77,7 @@ for server in Config.sections():
     # build a list of movied IDs already in the sync server, this is used later to prevent readding a movie that already
     # exists.
     # TODO refactor variable names to make it clear this builds list of existing not list of movies to add
-    # TODO add reconcilliation to remove movies that have been deleted from source server
+    # TODO #11 add reconcilliation to remove movies that have been deleted from source server
     movieIds_to_syncserver = []
     for movie_to_sync in SyncServerMovies.json():
         movieIds_to_syncserver.append(movie_to_sync['tmdbId'])
@@ -114,6 +115,12 @@ for server in Config.sections():
                 logger.info('adding {0} to {1} server'.format(movie['title'], server))
             else:
                 logging.debug('{0} already in {1} library'.format(movie['title'], server))
+        else:
+            logging.debug('Skipping {0}, wanted profile: {1} found profile: {2}'.format(movie['title'],
+                                                                                        movie['profileId'],
+                                                                                        int(ConfigSectionMap(server)['profile'])
+                                                                                        ))
+
 
 
     if len(searchid):
