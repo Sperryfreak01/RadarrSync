@@ -7,8 +7,13 @@ import sys
 from bs4 import BeautifulSoup
 
 DEV = True
+
+# TODO add way for users to see what would sync without syncing
+# @body I think the best way would be to create a sync report "Sync_Test.txt" or something like it
 WHAT_IF = True
 
+
+# TODO move log level into config file
 ########################################################################################################################
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -48,7 +53,6 @@ def validateProfile(root_url, api, profileName):
         profiles = session.get('http://192.168.2.4:9004/api/profile', headers=headers).json()
     try:
         profileNum = int(profileName)
-    #if isinstance(profileName, int):  # check and see if were given the profile number or the profle name
         if profileNum in range(1, len(profiles)+1):
             logger.debug('user supplied profile number ({0}) found on server'.format(profileName))
             return profileNum  # profile existsso return the ID to be consistant with value returned when a profile name supplied
@@ -56,7 +60,6 @@ def validateProfile(root_url, api, profileName):
             logger.warning('user supplied profile number ({0}) not found on server'.format(profileName))
             return False
     except:
-    #else:
         for i in range(0, len(profiles)):
             if profiles[i]['name'] == profileName:
                 logger.debug('{0} is profile {1}'.format(profiles[i]['name'], i + 1))
@@ -139,6 +142,7 @@ for server in Config.sections():
         movieIds_to_syncserver.append(movie_to_sync['tmdbId'])
         #logger.debug('found movie to be added')
 
+    # TODO Need better documentation on this section
     newMovies = 0
     searchid = []
     for movie in radarrMovies.json():
@@ -159,7 +163,7 @@ for server in Config.sections():
                            'qualityProfileId': movie['qualityProfileId'],
                            'titleSlug': movie['titleSlug'],
                            'tmdbId': movie['tmdbId'],
-                           'path': movie['path'],
+                           'path': movie['path'],  # TODO Consider adding support for user paths in config file
                            'monitored': movie['monitored'],
                            'images': images,
                            'profileId': movie['profileId'],
