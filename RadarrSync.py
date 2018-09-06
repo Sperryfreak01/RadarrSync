@@ -13,10 +13,11 @@ DEV = True # If your are not Sperryfreak01 this should be False
 WHAT_IF = True
 
 
+
 # TODO move log level into config file
 ########################################################################################################################
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 
 fileHandler = logging.FileHandler("./Output.txt")
@@ -90,6 +91,7 @@ def listProfiles(root_url, api):
 
 # ---------------------------------------------Main Script-------------------------------------------------------------#
 
+
 Config = configparser.ConfigParser()
 
 # Loads an alternate config file so that I can work on my servers without uploading my personal config to github
@@ -140,6 +142,7 @@ for server in Config.sections():
     # exists.
     # TODO refactor variable names to make it clear this builds list of existing not list of movies to add
     # TODO #11 Add reconciliation of sync server to primary server
+
     movieIds_to_syncserver = []
     for movie_to_sync in SyncServerMovies.json():
         movieIds_to_syncserver.append(movie_to_sync['tmdbId'])
@@ -178,6 +181,12 @@ for server in Config.sections():
                 logger.info('adding {0} to {1} server'.format(movie['title'], server))
             else:
                 logging.debug('{0} already in {1} library'.format(movie['title'], server))
+        else:
+            logging.debug('Skipping {0}, wanted profile: {1} found profile: {2}'.format(movie['title'],
+                                                                                        movie['profileId'],
+                                                                                        int(ConfigSectionMap(server)['profile'])
+                                                                                        ))
+
 
 
     if len(searchid):
