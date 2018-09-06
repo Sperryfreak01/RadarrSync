@@ -55,13 +55,13 @@ def validateProfile(root_url, api, profileName):
         profileNum = int(profileName)
         if profileNum in range(1, len(profiles)+1):
             logger.debug('user supplied profile number ({0}) found on server'.format(profileName))
-            return profileNum  # profile existsso return the ID to be consistant with value returned when a profile name supplied
+            return profileNum  # profile exists so return the ID to be consistant with value returned when a profile name supplied
         else:
             logger.warning('user supplied profile number ({0}) not found on server'.format(profileName))
             return False
     except:
         for i in range(0, len(profiles)):
-            if profiles[i]['name'] == profileName:
+            if profiles[i]['name'].lower() == profileName.lower():
                 logger.debug('{0} is profile {1}'.format(profiles[i]['name'], i + 1))
                 return i + 1  # validated the profile is on the server so return the ID number
     logger.warning('user supplied profile name ({0}) not found on server'.format(profileName))
@@ -123,7 +123,10 @@ for server in Config.sections():
         session.trust_env = False
         SyncServer_url = ConfigSectionMap(server)['url']
         SyncServer_key = ConfigSectionMap(server)['key']
-        SyncServer_profile = validateProfile(SyncServer_url, SyncServer_key, ConfigSectionMap(server)['profile'])
+        SyncServer_profile = validateProfile(SyncServer_url, SyncServer_key, ConfigSectionMap(server)['profile'])  
+        if not SyncServer_profile:
+            logger.error('The profile provided was not found on {}'.format(server))
+            continue
         SyncServerMovies = session.get('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key))
         if SyncServerMovies.status_code != 200:
             logger.error('4K Radarr server error - response {}'.format(SyncServerMovies.status_code))
