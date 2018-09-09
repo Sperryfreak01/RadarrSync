@@ -11,23 +11,7 @@ DEV = True # If your are not Sperryfreak01 this should be False
 # TODO add way for users to see what would sync without syncing
 # @body I think the best way would be to create a sync report "Sync_Test.txt" or something like it
 WHAT_IF = True
-
-
-
-# TODO move log level into config file
-########################################################################################################################
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-
-fileHandler = logging.FileHandler("./Output.txt")
-fileHandler.setFormatter(logFormatter)
-logger.addHandler(fileHandler)
-
-consoleHandler = logging.StreamHandler(sys.stdout)
-consoleHandler.setFormatter(logFormatter)
-logger.addHandler(consoleHandler)
-########################################################################################################################
+Config = configparser.ConfigParser()
 
 
 def ConfigSectionMap(section):
@@ -89,11 +73,8 @@ def listProfiles(root_url, api):
     return profileList
 
 
+
 # ---------------------------------------------Main Script-------------------------------------------------------------#
-
-
-Config = configparser.ConfigParser()
-
 # Loads an alternate config file so that I can work on my servers without uploading my personal config to github
 if DEV:
     settingsFilename = os.path.join(os.getcwd(), 'Dev'
@@ -101,6 +82,31 @@ if DEV:
 else:
     settingsFilename = os.path.join(os.getcwd(), 'Config.txt')
 Config.read(settingsFilename)
+
+logger = logging.getLogger()
+try:
+    logLevel = ConfigSectionMap("General")['loglevel']
+    print(logLevel)
+    if logLevel.upper() == 'INFO':
+        logger.setLevel(logging.INFO)
+    elif logLevel.upper() == 'DEBUG':
+        logger.setLevel(logging.DEBUG)
+        logger.debug('logging debug info')
+    elif logLevel.upper() == 'WARN':
+        logger.setLevel(logging.WARNING)
+    else:
+        logger.setLevel(logging.INFO)
+except:
+    logger.setLevel(logging.INFO)
+logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+
+fileHandler = logging.FileHandler("./Output.txt")
+fileHandler.setFormatter(logFormatter)
+logger.addHandler(fileHandler)
+
+consoleHandler = logging.StreamHandler(sys.stdout)
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
 
 # Build primary server URLs and retrieve a json object of the primary server movies
 radarr_url = ConfigSectionMap("Radarr")['url']
@@ -116,7 +122,7 @@ if radarrMovies.status_code != 200:
 # MultiServer support, iterates through the config file syncing to multiple radarr servers STILL A ONE WAY SYNC
 for server in Config.sections():
 
-    if server == 'Default' or server == "Radarr":
+    if server == 'Default' or server == "Radarr" or server == "General":
         continue  # Default/primary server section handled previously as it always needed so break out of the loop
 
     else:
