@@ -73,6 +73,31 @@ def listProfiles(root_url, api):
     return profileList
 
 
+def checkMovie(movie, PrimaryServer_Movies):
+    if movie['tmdbId'] not in PrimaryServer_Movies:
+        logging.debug('title: {0}'.format(movie['title']))
+        logging.debug('qualityProfileId: {0}'.format(movie['qualityProfileId']))
+        logging.debug('titleSlug: {0}'.format(movie['titleSlug']))
+        images = movie['images']
+        for image in images:
+            image['url'] = '{0}{1}'.format(radarr_url, image['url'])
+            logging.debug(image['url'])
+        logging.debug('tmdbId: {0}'.format(movie['tmdbId']))
+        logging.debug('path: {0}'.format(movie['path']))
+        logging.debug('monitored: {0}'.format(movie['monitored']))
+
+        payload = {'title': movie['title'],
+                   'qualityProfileId': movie['qualityProfileId'],
+                   'titleSlug': movie['titleSlug'],
+                   'tmdbId': movie['tmdbId'],
+                   'path': movie['path'],  # TODO Consider adding support for user paths in config file
+                   'monitored': movie['monitored'],
+                   'images': images,
+                   'profileId': movie['profileId'],
+                   'minimumAvailability': 'released'
+                   }
+
+
 
 # ---------------------------------------------Main Script-------------------------------------------------------------#
 # Loads an alternate config file so that I can work on my servers without uploading my personal config to github
@@ -141,7 +166,8 @@ for server in Config.sections():
             sys.exit(0)
 
         if WHAT_IF:
-            continue
+            pass
+            #continue
 
 
     # build a list of movied IDs already in the sync server, this is used later to prevent readding a movie that already
@@ -149,29 +175,38 @@ for server in Config.sections():
     # TODO refactor variable names to make it clear this builds list of existing not list of movies to add
     # TODO #11 Add reconciliation of sync server to primary server
 
-    movieIds_to_syncserver = []
+    PrimaryServer_Movies = []
     for movie_to_sync in SyncServerMovies.json():
-        movieIds_to_syncserver.append(movie_to_sync['tmdbId'])
+        PrimaryServer_Movies.append(movie_to_sync['tmdbId'])
         #logger.debug('found movie to be added')
 
-    # TODO Need better documentation on this section
+
     newMovies = 0
     searchid = []
-    for movie in radarrMovies.json():
+    for movie in radarrMovies.json():  # interate through primary server, building a list of movies w/ correct profile
         if movie['profileId'] == SyncServer_profile:
-            if movie['tmdbId'] not in movieIds_to_syncserver:
-                logging.debug('title: {0}'.format(movie['title']))
-                logging.debug('qualityProfileId: {0}'.format(movie['qualityProfileId']))
-                logging.debug('titleSlug: {0}'.format(movie['titleSlug']))
-                images = movie['images']
+            if movie['tmdbId'] not in PrimaryServer_Movies: # make sure we dont re-add movies that are already there
+                images = movie['images']  # Images required to create movie, pull URL from primary server
+                logging.debug('''
+                                Title: {0}
+                                QualityProfileId: {1}
+                                TitleSlug: {2}
+                                TmdbId: {3}
+                                Path: {4}
+                                Monitored: {5}
+                                '''.format(movie['title'],
+                                           movie['qualityProfileId'],
+                                           movie['titleSlug'],
+                                           movie['tmdbId'],
+                                           movie['path'],
+                                           movie['monitored']
+                                           )
+                              )
                 for image in images:
                     image['url'] = '{0}{1}'.format(radarr_url, image['url'])
                     logging.debug(image['url'])
-                logging.debug('tmdbId: {0}'.format(movie['tmdbId']))
-                logging.debug('path: {0}'.format(movie['path']))
-                logging.debug('monitored: {0}'.format(movie['monitored']))
 
-                payload = {'title': movie['title'],
+                payload = {'title': movie['title'],  # build the submission to create the movie on the SyncServer
                            'qualityProfileId': movie['qualityProfileId'],
                            'titleSlug': movie['titleSlug'],
                            'tmdbId': movie['tmdbId'],
@@ -181,17 +216,29 @@ for server in Config.sections():
                            'profileId': movie['profileId'],
                            'minimumAvailability': 'released'
                            }
-
-                r = session.post('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key), data=json.dumps(payload))
-                searchid.append(int(r.json()['id']))
-                logger.info('adding {0} to {1} server'.format(movie['title'], server))
+                addMovie = session.post('{0}/api/movie?apikey={1}'.format(SyncServer_url,
+                                                                          SyncServer_key
+                                                                          ),
+                                        data=json.dumps(payload)
+                                        )
+                if addMovie.status_code != 201:
+                    logger.error('Failed to add move to {0} - response {1} - {2}'.format(server,
+                                                                                         addMovie.status_code,
+                                                                                         addMovie.text
+                                                                                         )
+                                 )
+                    continue
+                else:
+                    searchid.append(int(addMovie.json()['id']))
+                    logger.info('added {0} to {1} server'.format(movie['title'], server))
             else:
                 logging.debug('{0} already in {1} library'.format(movie['title'], server))
         else:
             logging.debug('Skipping {0}, wanted profile: {1} found profile: {2}'.format(movie['title'],
                                                                                         movie['profileId'],
-                                                                                        int(ConfigSectionMap(server)['profile'])
-                                                                                        ))
+                                                                                        SyncServer_profile
+                                                                                        )
+                          )
 
 
 
