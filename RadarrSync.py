@@ -109,21 +109,25 @@ def addMovie(primaryServer, syncServer):
                            'profileId': syncServer['destProfile'],
                            'minimumAvailability': 'released'
                            }
-                addMovie = syncServer['session'].post('{0}/api/movie?apikey={1}'.format(syncServer['url'],
-                                                                          syncServer['key']
-                                                                          ),
-                                        data=json.dumps(payload)
-                                        )
-                if addMovie.status_code != 201:
-                    logger.error('Failed to add move to {0} - response {1} - {2}'.format(syncServer['name'],
-                                                                                         addMovie.status_code,
-                                                                                         addMovie.text
-                                                                                         )
-                                 )
-                    continue
+                if not syncServer['whatIf']:  # if sync_test is enabled then we skip the add call to the api
+                    addMovie = syncServer['session'].post('{0}/api/movie?apikey={1}'.format(syncServer['url'],
+                                                                              syncServer['key']
+                                                                              ),
+                                            data=json.dumps(payload)
+                                            )
+                    if addMovie.status_code != 201:
+                        logger.error('Failed to add move to {0} - response {1} - {2}'.format(syncServer['name'],
+                                                                                             addMovie.status_code,
+                                                                                             addMovie.text
+                                                                                             )
+                                     )
+                        continue
+                    else:
+                        searchid.append(int(addMovie.json()['id']))
+                        if not syncServer['whatIf']:
+                            logger.info('added {0} to {1} server'.format(movie['title'], syncServer['name']))
                 else:
-                    searchid.append(int(addMovie.json()['id']))
-                    logger.info('added {0} to {1} server'.format(movie['title'], syncServer['name']))
+                    logger.info('TEST! - added {0} to {1} server'.format(movie['title'], syncServer['name']))
             else:
                 logging.debug('{0} already in {1} library'.format(movie['title'], syncServer['name']))
         else:
@@ -214,11 +218,11 @@ radarrMovies = radarrServer['session'].get('{0}/api/movie?apikey={1}'.format(rad
 if radarrMovies.status_code != 200:
     logger.error('Radarr server error - response {}'.format(radarrMovies.status_code))
     sys.exit(0)
-
 radarrServer['movies'] = radarrMovies.json()
 radarrServer['movieIDs'] = []
 for libraryMovie in radarrMovies.json():
     radarrServer['movieIDs'].append(libraryMovie['tmdbId'])
+
 
 # MultiServer support, iterates through the config file syncing to multiple radarr servers STILL A ONE WAY SYNC
 for server in Config.sections():
@@ -243,7 +247,14 @@ for server in Config.sections():
         except KeyError:
             logger.debug('destination_profile directive not found in config, using "profile" for source and destination ')
             syncServer['destProfile'] = syncServer['profile']
-
+        try:
+            syncServer['whatIf'] = False
+            sync_test = ConfigSectionMap('General')['sync_test']
+            if sync_test.lower() == 'enabled':
+                syncServer['whatIf'] = True
+        except KeyError:
+            logger.debug('sync_test  directive not found in config file')
+            syncServer['whatIf'] = False
         SyncServerMovies = syncServer['session'].get('{0}/api/movie?apikey={1}'.format(syncServer['url'], syncServer['key']))
         if SyncServerMovies.status_code != 200:
             logger.error('4K Radarr server error - response {}'.format(SyncServerMovies.status_code))
