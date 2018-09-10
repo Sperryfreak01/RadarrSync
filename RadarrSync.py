@@ -106,7 +106,7 @@ def addMovie(primaryServer, syncServer):
                            'path': movie['path'],  # TODO Consider adding support for user paths in config file
                            'monitored': movie['monitored'],
                            'images': images,
-                           'profileId': movie['profileId'],
+                           'profileId': syncServer['destProfile'],
                            'minimumAvailability': 'released'
                            }
                 addMovie = syncServer['session'].post('{0}/api/movie?apikey={1}'.format(syncServer['url'],
@@ -236,6 +236,14 @@ for server in Config.sections():
         if not syncServer['profile']:
             logger.error('The profile provided was not found on {}'.format(syncServer['name']))
             continue
+        try:
+            syncServer['destProfile'] = validateProfile(syncServer['url'],
+                                                        syncServer['key'],
+                                                        ConfigSectionMap(syncServer['name'])['destination_profile'])
+        except KeyError:
+            logger.debug('destination_profile directive not found in config, using "profile" for source and destination ')
+            syncServer['destProfile'] = syncServer['profile']
+
         SyncServerMovies = syncServer['session'].get('{0}/api/movie?apikey={1}'.format(syncServer['url'], syncServer['key']))
         if SyncServerMovies.status_code != 200:
             logger.error('4K Radarr server error - response {}'.format(SyncServerMovies.status_code))
@@ -254,6 +262,6 @@ for server in Config.sections():
         if bidirectional.lower() == 'enabled':
             delMovie(radarrServer, syncServer)
     except KeyError:
-        bidirectional = 'false'
+        logger.debug('Bidirectional sync directive not found in config file')
 
 
