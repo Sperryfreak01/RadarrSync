@@ -35,7 +35,7 @@ def validateProfile(root_url, api, profileName):
             'X-Api-Key': api,
             'Referer': '{0}/settings/profiles'.format(root_url)
         }
-        profiles = session.get('http://192.168.2.4:9004/api/profile', headers=headers).json()
+        profiles = session.get('{0}/api/profile'.format(root_url), headers=headers).json()
     try:
         profileNum = int(profileName)
         if profileNum in range(1, len(profiles)+1):
@@ -209,6 +209,8 @@ consoleHandler.setFormatter(logFormatter)
 logger.addHandler(consoleHandler)
 
 # Build primary server URLs and retrieve a json object of the primary server movies
+# @TODO Primary server config hardcoded
+# @body need to modify this section to look for default or Radarr or remove default as option, though I like it for 3.0
 radarrServer = {}
 radarrServer['url'] = ConfigSectionMap("Radarr")['url']
 radarrServer['key'] = ConfigSectionMap("Radarr")['key']
