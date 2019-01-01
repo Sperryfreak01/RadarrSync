@@ -100,11 +100,15 @@ for server in Config.sections():
                 logging.debug('path: {0}'.format(movie['path']))
                 logging.debug('monitored: {0}'.format(movie['monitored']))
 
+                # Update the path based on "path_from" and "path_to" passed to us in Config.txt
+                path = movie['path']
+                path = path.replace(ConfigSectionMap(server)['path_from'], ConfigSectionMap(server)['path_to'])
+
                 payload = {'title': movie['title'],
                            'qualityProfileId': movie['qualityProfileId'],
                            'titleSlug': movie['titleSlug'],
                            'tmdbId': movie['tmdbId'],
-                           'path': movie['path'],
+                           'path': path,
                            'monitored': movie['monitored'],
                            'images': images,
                            'profileId': SyncServer_target_profile, 

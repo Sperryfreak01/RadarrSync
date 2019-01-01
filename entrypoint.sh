@@ -6,10 +6,13 @@ cat << EOF > /Config.txt
 [Radarr]
 url = $SOURCE_RADARR_URL
 key = $SOURCE_RADARR_KEY
+path = $SOURCE_RADARR_PATH
 
 [Radarr]
 url = $TARGET_RADARR_URL
 key = $TARGET_RADARR_KEY
+path_from = $SOURCE_RADARR_PATH
+path_to = $TARGET_RADARR_PATH
 # Sync movies coming _from_ the source in this quality profile
 profile = $SOURCE_RADARR_PROFILE_NUM
 # When adding movise to the destination Radarr, use _this_ quality profile (may differ from source)
