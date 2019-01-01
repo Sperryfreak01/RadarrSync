@@ -8,7 +8,7 @@ url = $SOURCE_RADARR_URL
 key = $SOURCE_RADARR_KEY
 path = $SOURCE_RADARR_PATH
 
-[Radarr]
+[Radarr-target]
 url = $TARGET_RADARR_URL
 key = $TARGET_RADARR_KEY
 path_from = $SOURCE_RADARR_PATH
