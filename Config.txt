@@ -5,6 +5,10 @@ key = FCKGW-RHQQ2-YXRKT-8TG6W-2B7Q8
 [Radarr4k]
 url = http://127.0.0.1:8080
 key = FCKGW-RHQQ2-YXRKT-8TG6W-2B7Q8
+
+# This matches the profile ID from the source Radarr instance
 profile = 5
 
+# This matches the profile ID on the target Radarr instance (may not be the same as the source Radarr)
+target_profile = 1
 

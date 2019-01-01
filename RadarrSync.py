@@ -69,6 +69,7 @@ for server in Config.sections():
         session.trust_env = False
         SyncServer_url = ConfigSectionMap(server)['url']
         SyncServer_key = ConfigSectionMap(server)['key']
+        SyncServer_target_profile = ConfigSectionMap(server)['target_profile']
         SyncServerMovies = session.get('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key))
         if SyncServerMovies.status_code != 200:
             logger.error('4K Radarr server error - response {}'.format(SyncServerMovies.status_code))
@@ -106,7 +107,7 @@ for server in Config.sections():
                            'path': movie['path'],
                            'monitored': movie['monitored'],
                            'images': images,
-                           'profileId': movie['profileId'],
+                           'profileId': SyncServer_target_profile, 
                            'minimumAvailability': 'released'
                            }
 

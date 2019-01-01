@@ -4,13 +4,16 @@
 
 cat << EOF > /Config.txt
 [Radarr]
-url = $TARGET_RADARR_URL
-key = $TARGET_RADARR_KEY
-
-[Radarr4k]
 url = $SOURCE_RADARR_URL
 key = $SOURCE_RADARR_KEY
+
+[Radarr]
+url = $TARGET_RADARR_URL
+key = $TARGET_RADARR_KEY
+# Sync movies coming _from_ the source in this quality profile
 profile = $SOURCE_RADARR_PROFILE_NUM
+# When adding movise to the destination Radarr, use _this_ quality profile (may differ from source)
+target_profile = $TARGET_RADARR_PROFILE_NUM
 EOF
 
 # Now execute the sync script in a loop, waiting DELAY before running again
