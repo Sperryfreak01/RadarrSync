@@ -13,5 +13,9 @@ key = $SOURCE_RADARR_KEY
 profile = $SOURCE_RADARR_PROFILE_NUM
 EOF
 
-# Now execute the sync script
-python /RadarrSync.py 
+# Now execute the sync script in a loop, waiting DELAY before running again
+while true
+do
+	python /RadarrSync.py 
+	sleep $DELAY
+done
