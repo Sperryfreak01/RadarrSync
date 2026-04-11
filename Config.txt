@@ -2,9 +2,15 @@
 url = https://example.com:443
 key = FCKGW-RHQQ2-YXRKT-8TG6W-2B7Q8
 
+# Radarr API version (if you are using an old version of Radarr, you may be able to comment out this line)
+version = 3
+
 [Radarr4k]
 url = http://127.0.0.1:8080
 key = FCKGW-RHQQ2-YXRKT-8TG6W-2B7Q8
+
+# Radarr API version (if you are using an old version of Radarr, you may be able to comment out this line)
+version = 3
 
 # Use these two lines to perform a string replacemnet on the movie path
 path_from = '/Movies/'

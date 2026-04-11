@@ -38,7 +38,7 @@ def ConfigSectionMap(section):
             dict1[option] = None
     return dict1
 
-logger.debug('RadarSync Version {}'.format(VER))
+logger.debug('RadarrSync Version {}'.format(VER))
 Config = configparser.ConfigParser()
 
 # Loads an alternate config file so that I can work on my servers without uploading config to github
@@ -51,9 +51,11 @@ Config.read(settingsFilename)
 
 radarr_url = ConfigSectionMap("Radarr")['url']
 radarr_key = ConfigSectionMap("Radarr")['key']
+radarr_version = ConfigSectionMap("Radarr")['version']
+radarr_version_fragment = '/v'+radarr_version if radarr_version else ''
 radarrSession = requests.Session()
 radarrSession.trust_env = False
-radarrMovies = radarrSession.get('{0}/api/movie?apikey={1}'.format(radarr_url, radarr_key))
+radarrMovies = radarrSession.get('{0}/api{1}/movie?apikey={2}'.format(radarr_url, radarr_version_fragment, radarr_key))
 if radarrMovies.status_code != 200:
     logger.error('Radarr server error - response {}'.format(radarrMovies.status_code))
     sys.exit(0)
@@ -71,7 +73,9 @@ for server in Config.sections():
         SyncServer_url = ConfigSectionMap(server)['url']
         SyncServer_key = ConfigSectionMap(server)['key']
         SyncServer_target_profile = ConfigSectionMap(server)['target_profile']
-        SyncServerMovies = session.get('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key))
+        SyncServer_version = ConfigSectionMap(server)['version']
+        SyncServer_version_fragment = '/v'+SyncServer_version if SyncServer_version else ''
+        SyncServerMovies = session.get('{0}/api{1}/movie?apikey={2}'.format(SyncServer_url, SyncServer_version_fragment, SyncServer_key))
         if SyncServerMovies.status_code != 200:
             logger.error('4K Radarr server error - response {}'.format(SyncServerMovies.status_code))
             sys.exit(0)
@@ -86,9 +90,8 @@ for server in Config.sections():
         #logger.debug('found movie to be added')
 
     newMovies = 0
-    searchid = []
     for movie in radarrMovies.json():
-        if movie['profileId'] == int(ConfigSectionMap(server)['profile']):
+        if movie['qualityProfileId'] == int(ConfigSectionMap(server)['profile']):
             if movie['tmdbId'] not in movieIds_to_syncserver:
                 logging.debug('title: {0}'.format(movie['title']))
                 logging.debug('qualityProfileId: {0}'.format(movie['qualityProfileId']))
@@ -106,19 +109,20 @@ for server in Config.sections():
                 path = path.replace(ConfigSectionMap(server)['path_from'], ConfigSectionMap(server)['path_to'])
 
                 payload = {'title': movie['title'],
-                           'qualityProfileId': movie['qualityProfileId'],
+                           'qualityProfileId': SyncServer_target_profile,
                            'titleSlug': movie['titleSlug'],
                            'tmdbId': movie['tmdbId'],
                            'path': path,
                            'monitored': movie['monitored'],
                            'images': images,
-                           'profileId': SyncServer_target_profile, 
-                           'minimumAvailability': 'released'
+                           'minimumAvailability': 'released',
+                           'addOptions': {'searchForMovie': True}
                            }
 
-                r = session.post('{0}/api/movie?apikey={1}'.format(SyncServer_url, SyncServer_key), data=json.dumps(payload))
-                searchid.append(int(r.json()['id']))
                 logger.info('adding {0} to {1} server'.format(movie['title'], server))
+                r = session.post('{0}/api{1}/movie?apikey={2}'.format(SyncServer_url, SyncServer_version_fragment, SyncServer_key), data=json.dumps(payload), headers={'Content-Type': 'application/json'})
+                if r.status_code >= 300:
+                    logger.error('Error adding movie to 4K Radarr server - response {}'.format(r.status_code))
             else:
                 logging.debug('{0} already in {1} library'.format(movie['title'], server))
         else:
@@ -127,9 +131,4 @@ for server in Config.sections():
                                                                                         int(ConfigSectionMap(server)['profile'])
                                                                                         ))
 
-
-
-    if len(searchid):
-        payload = {'name' : 'MoviesSearch', 'movieIds' : searchid}
-        session.post('{0}/api/command?apikey={1}'.format(SyncServer_url, SyncServer_key), data=json.dumps(payload))
 
